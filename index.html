@@ -7,67 +7,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
-    /*
-    ══════════════════════════════════════════════
-    SUPABASE SETUP
-    1. Create project at supabase.com
-    2. Run the SQL below in the SQL Editor
-    3. Paste your URL + anon key into the CONFIG
-       section at the top of the <script> block
-    ══════════════════════════════════════════════
-
-    create table targets (
-      user_id uuid references auth.users primary key,
-      rest_cal int default 2100, rest_protein int default 195,
-      rest_carbs int default 155, rest_fat int default 80,
-      training_cal int default 2200, training_protein int default 195,
-      training_carbs int default 185, training_fat int default 80
-    );
-    alter table targets enable row level security;
-    create policy "own" on targets for all using (auth.uid()=user_id);
-
-    create table settings (
-      user_id uuid references auth.users primary key,
-      day_type text default 'rest'
-    );
-    alter table settings enable row level security;
-    create policy "own" on settings for all using (auth.uid()=user_id);
-
-    create table log_entries (
-      id text primary key, user_id uuid references auth.users not null,
-      date text, item_key text, name text, grams numeric,
-      cal numeric, protein numeric, carbs numeric, fat numeric,
-      meal text, timestamp bigint
-    );
-    alter table log_entries enable row level security;
-    create policy "own" on log_entries for all using (auth.uid()=user_id);
-
-    create table weight_log (
-      id uuid primary key default gen_random_uuid(),
-      user_id uuid references auth.users not null,
-      date text, weight numeric, unique(user_id,date)
-    );
-    alter table weight_log enable row level security;
-    create policy "own" on weight_log for all using (auth.uid()=user_id);
-
-    create table supplements (
-      user_id uuid references auth.users not null,
-      date text not null, items jsonb default '[]',
-      primary key (user_id, date)
-    );
-    alter table supplements enable row level security;
-    create policy "own" on supplements for all using (auth.uid()=user_id);
-
-    create table library_overrides (
-      user_id uuid references auth.users not null,
-      item_key text not null, base_grams numeric,
-      cal numeric, protein numeric, carbs numeric, fat numeric,
-      primary key (user_id, item_key)
-    );
-    alter table library_overrides enable row level security;
-    create policy "own" on library_overrides for all using (auth.uid()=user_id);
-    */
-
     :root {
       --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #242424; --surface3: #2a2a2a;
       --border: #2e2e2e; --text: #f0f0f0; --muted: #888; --muted2: #555;
@@ -79,8 +18,6 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.5; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
-
-    /* ── AUTH ─────────────────────────────────── */
     #auth-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; position: relative; z-index: 10; }
     .auth-box { width: 100%; max-width: 340px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 28px; }
     .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
@@ -100,8 +37,6 @@
     .auth-msg { margin-top: 12px; font-size: 11px; min-height: 16px; text-align: center; }
     .auth-msg.error { color: var(--red); }
     .auth-msg.success { color: var(--green); }
-
-    /* ── APP ──────────────────────────────────── */
     #app-screen { display: none; height: 100vh; flex-direction: column; }
     #app-screen.visible { display: flex; }
     #side-nav { display: none; }
@@ -111,7 +46,6 @@
     .nav-btn.active { color: var(--accent); }
     .nav-btn.active svg { opacity: 1; }
     #tab-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 0 16px 0; -webkit-overflow-scrolling: touch; }
-
     @media (min-width: 768px) {
       #app-screen { flex-direction: row; }
       #bottom-nav { display: none; }
@@ -132,27 +66,19 @@
       #tab-content { flex: 1; }
       .tab-inner { max-width: 680px; }
     }
-
-    /* ── SYNC ─────────────────────────────────── */
     .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted2); transition: background .3s; position: fixed; top: 14px; right: 16px; z-index: 200; }
     .sync-dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
     .sync-dot.error { background: var(--red); }
     @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
     @media (min-width: 768px) { .sync-dot { top: 18px; right: 24px; } }
-
-    /* ── TABS ─────────────────────────────────── */
     .tab-pane { display: none; animation: fadeIn .15s ease; }
     .tab-pane.active { display: block; }
     @keyframes fadeIn { from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)} }
     .tab-inner { padding: 20px 16px 0; margin: 0 auto; }
     @media (min-width: 768px) { .tab-inner { padding: 28px 32px 0; } }
-
-    /* ── COMMON ───────────────────────────────── */
     .section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
     .card + .card { margin-top: 12px; }
-
-    /* ── PROGRESS ─────────────────────────────── */
     .progress-row { margin-bottom: 12px; }
     .progress-row:last-child { margin-bottom: 0; }
     .progress-label { display: flex; justify-content: space-between; margin-bottom: 5px; }
@@ -163,16 +89,12 @@
     .fill-blue { background: var(--blue); }
     .fill-amber { background: var(--accent); }
     .fill-red { background: var(--red); }
-
-    /* ── RING ─────────────────────────────────── */
     .ring-wrap { display: flex; flex-direction: column; align-items: center; padding: 20px 0 16px; }
     .ring-track { fill: none; stroke: var(--surface2); stroke-width: 14; }
     .ring-fill { fill: none; stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset .5s cubic-bezier(.4,0,.2,1), stroke .3s; transform: rotate(-90deg); transform-origin: 50% 50%; }
     .ring-cal-num { font-family: var(--font); font-weight: 600; font-size: 26px; fill: var(--text); }
     .ring-cal-target { font-family: var(--font); font-size: 11px; fill: var(--muted); }
     .ring-cal-label { font-family: var(--font); font-size: 10px; fill: var(--muted); letter-spacing: 0.08em; }
-
-    /* ── DASHBOARD ────────────────────────────── */
     .dash-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 16px 0; }
     @media (min-width: 768px) { .dash-header { padding: 28px 32px 0; } }
     .dash-date { font-size: 13px; font-weight: 500; }
@@ -201,8 +123,6 @@
     .avg-chip { background: var(--surface2); border-radius: var(--radius-xs); padding: 7px 10px; flex: 1; min-width: 70px; text-align: center; }
     .avg-chip-val { font-size: 13px; font-weight: 600; display: block; }
     .avg-chip-label { font-size: 9px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
-
-    /* ── LOG ──────────────────────────────────── */
     .meal-section { margin-bottom: 8px; }
     .meal-section-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; cursor: pointer; }
     .meal-section-title { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; }
@@ -220,8 +140,6 @@
     .add-meal-btn { display: flex; align-items: center; gap: 6px; width: 100%; background: none; border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--muted); font-family: var(--font); font-size: 11px; padding: 10px 14px; cursor: pointer; transition: all .15s; margin-top: 8px; }
     .add-meal-btn:hover { border-color: var(--accent); color: var(--accent); }
     .empty-state { padding: 24px 0; text-align: center; color: var(--muted); font-size: 11px; }
-
-    /* ── LIBRARY ──────────────────────────────── */
     .lib-cat-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; cursor: pointer; border-bottom: 1px solid var(--border); }
     .lib-cat-title { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; color: var(--accent); text-transform: uppercase; }
     .lib-cat-count { font-size: 10px; color: var(--muted); }
@@ -231,8 +149,6 @@
     .lib-item-name { font-size: 12px; font-weight: 500; transition: color .15s; }
     .lib-item-base { font-size: 10px; color: var(--muted); margin-top: 2px; }
     .lib-item-macros { font-size: 10px; color: var(--muted2); text-align: right; line-height: 1.7; }
-
-    /* ── SETTINGS ─────────────────────────────── */
     .settings-section { margin-bottom: 24px; }
     .toggle-row { display: flex; background: var(--surface2); border-radius: var(--radius-sm); padding: 3px; width: fit-content; }
     .toggle-opt { padding: 7px 16px; border-radius: var(--radius-xs); border: none; background: none; color: var(--muted); font-family: var(--font); font-size: 12px; cursor: pointer; transition: all .15s; }
@@ -258,8 +174,6 @@
     .btn-danger { background: none; border: 1px solid var(--border); color: var(--muted); font-family: var(--font); font-size: 11px; padding: 8px 14px; border-radius: var(--radius-sm); cursor: pointer; transition: all .15s; }
     .btn-danger:hover { border-color: var(--red); color: var(--red); }
     .danger-row { display: flex; gap: 10px; flex-wrap: wrap; }
-
-    /* ── MODALS ───────────────────────────────── */
     #modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: flex-end; justify-content: center; z-index: 500; backdrop-filter: blur(4px); }
     #modal-overlay.open { display: flex; }
     @media (min-width: 768px) { #modal-overlay { align-items: center; } }
@@ -307,7 +221,6 @@
     .modal-footer-row { display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
     .wt-modal-input { width: 100%; background: var(--surface2); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: 14px 16px; color: var(--text); font-family: var(--font); font-size: 24px; font-weight: 600; outline: none; text-align: center; margin-bottom: 8px; }
     .wt-modal-note { font-size: 11px; color: var(--muted); text-align: center; }
-
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
@@ -321,7 +234,6 @@
 </head>
 <body>
 
-<!-- AUTH -->
 <div id="auth-screen">
   <div class="auth-box">
     <div class="auth-logo">
@@ -349,10 +261,8 @@
   </div>
 </div>
 
-<!-- SYNC DOT -->
 <div class="sync-dot" id="sync-dot"></div>
 
-<!-- APP -->
 <div id="app-screen">
   <nav id="side-nav">
     <div class="side-nav-logo">
@@ -376,14 +286,12 @@
       <button class="side-nav-signout" onclick="signOut()">Sign Out</button>
     </div>
   </nav>
-
   <div id="tab-content">
     <div id="tab-dashboard" class="tab-pane active"></div>
     <div id="tab-log" class="tab-pane"></div>
     <div id="tab-library" class="tab-pane"></div>
     <div id="tab-settings" class="tab-pane"></div>
   </div>
-
   <nav id="bottom-nav">
     <button class="nav-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
@@ -404,9 +312,6 @@
 <div id="toast"></div>
 
 <script>
-// ══════════════════════════════════════════
-// CONFIG — paste your Supabase values here
-// ══════════════════════════════════════════
 const SUPABASE_URL      = 'https://irtavsxxawvalarqfvzz.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Q2eY5ofcDPR811QtpH0B8A_Uv1eOmMG';
 
@@ -415,9 +320,6 @@ const _supa = _supabaseReady
   ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : { auth: { getSession: async()=>({data:{session:null}}), onAuthStateChange:()=>{}, signInWithPassword: async()=>({data:null,error:{message:'Supabase not configured'}}), signUp: async()=>({data:null,error:{message:'Supabase not configured'}}), signOut: async()=>{} } };
 
-// ══════════════════════════════════════════
-// FOOD LIBRARY
-// ══════════════════════════════════════════
 const FOOD_LIBRARY = {
   steak_100:               { name: 'Steak (NY strip / eye fillet)',          category: 'proteins',  baseGrams: 100, cal: 148,   protein: 22,   fat: 6,     carbs: 0,     isCount: false },
   chicken_thigh_100:       { name: 'Chicken Thighs (Macro Free Range)',      category: 'proteins',  baseGrams: 100, cal: 118,   protein: 19.8, fat: 5,     carbs: 1.5,   isCount: false },
@@ -450,6 +352,7 @@ const FOOD_LIBRARY = {
   bsc_bar_1:               { name: 'BSC Protein Bar',                       category: 'snacks',    baseGrams: 1,   cal: 389,   protein: 48.5, fat: 12.8,  carbs: 2.6,   isCount: true  },
   arla_pudding_150:        { name: 'Arla Protein Pudding',                  category: 'snacks',    baseGrams: 150, cal: 114,   protein: 15,   fat: 2.25,  carbs: 11.7,  isCount: false },
   coconut_mango_water_500: { name: 'Coconut Mango Water',                   category: 'snacks',    baseGrams: 500, cal: 133,   protein: 0,    fat: 0,     carbs: 33.5,  isCount: false },
+  protein_yoghurt_1:       { name: 'Protein Yoghurt (yoghurt+whey+stevia)', category: 'snacks',    baseGrams: 1,   cal: 296,   protein: 55.9, fat: 1.5,   carbs: 13.9,  isCount: true  },
 };
 
 const CATEGORIES   = [{key:'all',label:'All'},{key:'proteins',label:'Proteins'},{key:'carbs',label:'Carbs'},{key:'sauces',label:'Sauces'},{key:'sides',label:'Sides'},{key:'breakfast',label:'Breakfast'},{key:'snacks',label:'Snacks'}];
@@ -459,9 +362,6 @@ const SUPPLEMENTS  = ['Creatine','Fish Oil','Magnesium'];
 const MEALS        = ['breakfast','lunch','dinner','snacks'];
 const MEAL_LABELS  = {breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snacks:'Snacks'};
 
-// ══════════════════════════════════════════
-// STATE
-// ══════════════════════════════════════════
 const state = {
   activeTab: 'dashboard',
   today: toDateStr(new Date()),
@@ -471,9 +371,6 @@ const state = {
   modal: null, modalState: {},
 };
 
-// ══════════════════════════════════════════
-// STORAGE — localStorage + memory fallback
-// ══════════════════════════════════════════
 const _mem = {};
 const store = {
   get(k)    { try { return localStorage.getItem(k); }    catch(e) { return _mem[k] ?? null; } },
@@ -481,9 +378,6 @@ const store = {
   del(k)    { try { localStorage.removeItem(k); }        catch(e) { delete _mem[k]; } },
 };
 
-// ══════════════════════════════════════════
-// DB LAYER
-// ══════════════════════════════════════════
 const db = {
   getTargets:  () => JSON.parse(store.get('nutritionApp_targets'))  || {...DEFAULT_TARGETS},
   setTargets(d)    { store.set('nutritionApp_targets',  JSON.stringify(d)); syncTargets(d); },
@@ -523,9 +417,6 @@ function getEffectiveItem(key) {
   return ov ? {...base,...ov} : {...base};
 }
 
-// ══════════════════════════════════════════
-// SUPABASE SYNC
-// ══════════════════════════════════════════
 function setSyncing(v) {
   const dot = document.getElementById('sync-dot');
   if (dot) dot.className = 'sync-dot' + (v ? ' syncing' : '');
@@ -595,9 +486,6 @@ async function deleteLibraryOverride(key) {
   await _supa.from('library_overrides').delete().eq('user_id',uid).eq('item_key',key).catch(console.warn);
 }
 
-// ══════════════════════════════════════════
-// UTILS
-// ══════════════════════════════════════════
 function toDateStr(d) { return d.toISOString().slice(0,10); }
 function formatDate(str) { return new Date(str+'T12:00:00').toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}); }
 function uid() { return typeof crypto!=='undefined'&&crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2); }
@@ -616,9 +504,6 @@ function calcSevenDayAvg() {
 }
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
 
-// ══════════════════════════════════════════
-// NL PARSER
-// ══════════════════════════════════════════
 function parseNL(text, base) {
   const t=text.toLowerCase().trim(); if (!t) return {grams:base,note:null};
   if (/\b(half|smaller|small portion)\b/.test(t)) return {grams:Math.round(base*0.5),note:null};
@@ -630,9 +515,6 @@ function parseNL(text, base) {
   return {grams:base,note:"couldn't parse, using default"};
 }
 
-// ══════════════════════════════════════════
-// RENDER: DASHBOARD
-// ══════════════════════════════════════════
 function renderDashboard() {
   const today=state.today, dayType=db.getDayType(), targets=db.getTargets();
   const t=dayType==='training'
@@ -647,7 +529,6 @@ function renderDashboard() {
   const ringColor=calPct>1?'var(--red)':calPct>=0.8?'var(--accent)':'var(--blue)';
   let trendHTML='';
   if(lastW&&prevW){const d=(lastW.weight-prevW.weight).toFixed(1);trendHTML=d>0?`<span class="trend-up">▲ +${d}kg vs prev</span>`:d<0?`<span class="trend-down">▼ ${d}kg vs prev</span>`:`<span class="text-muted">— no change</span>`;}
-
   document.getElementById('tab-dashboard').innerHTML = `
     <div class="dash-header">
       <div class="dash-date">${formatDate(today)}</div>
@@ -692,9 +573,6 @@ function renderDashboard() {
     </div>`;
 }
 
-// ══════════════════════════════════════════
-// RENDER: LOG
-// ══════════════════════════════════════════
 function renderLog() {
   const today=state.today, todayLog=db.getLog(today);
   document.getElementById('tab-log').innerHTML = `
@@ -732,9 +610,6 @@ function renderLog() {
     </div>`;
 }
 
-// ══════════════════════════════════════════
-// RENDER: LIBRARY
-// ══════════════════════════════════════════
 function renderLibrary() {
   const overrides=db.getLibraryOverrides();
   document.getElementById('tab-library').innerHTML = `
@@ -759,9 +634,6 @@ function renderLibrary() {
     </div>`;
 }
 
-// ══════════════════════════════════════════
-// RENDER: SETTINGS
-// ══════════════════════════════════════════
 function renderSettings() {
   const dayType=db.getDayType(), targets=db.getTargets(), wl=db.getWeightLog().slice().reverse().slice(0,10);
   document.getElementById('tab-settings').innerHTML = `
@@ -811,9 +683,6 @@ function renderSettings() {
     </div>`;
 }
 
-// ══════════════════════════════════════════
-// MODALS
-// ══════════════════════════════════════════
 function openModal(html) { document.getElementById('modal-box').innerHTML=html; document.getElementById('modal-overlay').classList.add('open'); }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); state.modal=null; }
 function handleOverlayClick(e) { if(e.target===document.getElementById('modal-overlay')) closeModal(); }
@@ -933,9 +802,6 @@ function confirmLogWeight() {
   db.setWeightLog(wl); closeModal(); renderDashboard(); showToast('Weight logged: '+v+' kg');
 }
 
-// ══════════════════════════════════════════
-// ACTIONS
-// ══════════════════════════════════════════
 function toggleDayType() { db.setDayType(db.getDayType()==='training'?'rest':'training'); renderActiveTab(); }
 function setDayType(t) { db.setDayType(t); renderSettings(); if(state.activeTab==='dashboard') renderDashboard(); }
 function toggleMealOpen(meal) { state.mealOpen[meal]=!state.mealOpen[meal]; renderActiveTab(); }
@@ -972,9 +838,6 @@ function clearAllData() {
   renderActiveTab(); renderDashboard(); showToast('All data cleared');
 }
 
-// ══════════════════════════════════════════
-// TABS
-// ══════════════════════════════════════════
 function switchTab(tab) {
   state.activeTab=tab; state.today=toDateStr(new Date());
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
@@ -998,9 +861,6 @@ function renderActiveTab() {
   }
 }
 
-// ══════════════════════════════════════════
-// AUTH
-// ══════════════════════════════════════════
 let authMode = 'signin';
 function setAuthMode(mode) {
   authMode = mode;
@@ -1043,9 +903,6 @@ async function signOut() {
   document.getElementById('auth-screen').style.display = 'flex';
 }
 
-// ══════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('auth-tab-signin').addEventListener('click', () => setAuthMode('signin'));
   document.getElementById('auth-tab-signup').addEventListener('click', () => setAuthMode('signup'));
